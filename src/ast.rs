@@ -3,6 +3,13 @@ pub type Pos = usize;
 #[derive(Debug, PartialEq, Eq, Hash)]                                                                
 pub struct Range(pub Pos, pub Pos);                                                         
                                                                                 
+#[derive(Debug, PartialEq)]
+pub enum TypeAst {
+    Int(Range),
+    Bool(Range),
+    Function(Box<TypeAst>, Box<TypeAst>),
+}
+
 #[derive(Debug, PartialEq)]                                                                
 pub enum Ast {                                                                  
     Paren(Box<Ast>, Range),
@@ -17,6 +24,12 @@ pub enum Ast {
         right: Box<Ast>,
         body: Box<Ast>,
         range: Range
+    },
+
+    Function {
+        input: (String, Range),
+        input_type: TypeAst,
+        ret: Box<Ast>,
     },
 }                                                                               
 
