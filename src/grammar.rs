@@ -1,6 +1,10 @@
 use crate::ast::{Ast, Range, TypeAst};
 use peg;
 
+const IN: &str = "in";
+const LET: &str = "let";
+const KEYWORDS: &[&str] = &[ IN, LET ];
+
 peg::parser! {
     grammar grammar() for str {
         rule _ = quiet! { (" " / "\t" / "\n" / "\r")* { } }
@@ -29,7 +33,11 @@ peg::parser! {
             = ident_start_char() / ['0'..='9']
 
         rule ident() -> String
-            = quiet!{ s:$(ident_start_char() ident_char()*) { s.to_string() } }
+            = quiet!{ s:$(ident_start_char() ident_char()*) {?
+                if KEYWORDS.iter().all(|x| *x != s) {
+                    Ok(s.to_string())
+                } else { Err("Unexpected keyword") }
+            } }
             / expected!("identifier")
 
         rule type_expr() -> TypeAst
@@ -53,6 +61,9 @@ peg::parser! {
             { Ast::Var(i, Range(begin, end)) }
 
         pub rule arith() -> Ast = precedence! {
+            x:(@) _ ">" _ y:@ { Ast::RApp(Box::new(x), Box::new(y)) }
+            x:(@) _ "<" _ y:@ { Ast::LApp(Box::new(x), Box::new(y)) }
+            --
             x:(@) _ "and" _ y:@ { Ast::And(Box::new(x), Box::new(y)) }
             --
             x:(@) _ "="   _ y:@ { Ast::Eq(Box::new(x), Box::new(y)) }
