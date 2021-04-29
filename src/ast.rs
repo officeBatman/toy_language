@@ -1,16 +1,16 @@
 pub type Pos = usize;                                                               
                                                                                 
-#[derive(Debug, PartialEq, Eq, Hash)]                                                                
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]                                                                
 pub struct Range(pub Pos, pub Pos);                                                         
                                                                                 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TypeAst {
     Int(Range),
     Bool(Range),
     Function(Box<TypeAst>, Box<TypeAst>),
 }
 
-#[derive(Debug, PartialEq)]                                                                
+#[derive(Debug, PartialEq, Clone)]                                                                
 pub enum Ast {                                                                  
     Paren(Box<Ast>, Range),
     Var(String, Range),
