@@ -13,6 +13,7 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 pub enum Value {
     I32(i32),
     Bool(bool),
+    Function(String, Ast),
 }
 
 impl Value {
@@ -84,6 +85,9 @@ impl Evaluator {
                 self.var(name.clone(), self.eval(right.as_ref())?, move |ev| {
                     ev.eval(body.as_ref())
                 })
+            }
+            Ast::Function { input: (input_var, _), ret, .. } => {
+                Ok(Value::Function(input_var.clone(), ret.as_ref().clone()))
             }
         }
     }

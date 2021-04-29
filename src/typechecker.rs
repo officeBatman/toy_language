@@ -1,11 +1,12 @@
-use std::collections::HashMap;
-use std::cell::RefCell;
+use crate::ast::TypeAst;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::ast::Ast;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Type {
     Int,
     Bool,
+    Function(Rc<(Type, Type)>),
 }
 
 pub struct TypeChecker {
@@ -28,6 +29,17 @@ impl TypeChecker {
 
     pub fn get_var(&self, name: &str) -> Option<Type> {
         self.vars.borrow().get(name).cloned()
+    }
+
+    pub fn eval(&self, type_ast: &TypeAst) -> Result<Type, ()> {
+        match type_ast {
+            TypeAst::Int(_) => Ok(Type::Int),
+            TypeAst::Bool(_) => Ok(Type::Bool),
+            TypeAst::Function(l, r) => {
+                let func = (self.eval(l)?, self.eval(r)?);
+                Ok(Type::Function(Rc::new(func)))
+            }
+        }
     }
 
     pub fn typecheck(&self, ast: &Ast) -> Result<Type, ()> {
@@ -67,7 +79,14 @@ impl TypeChecker {
                     checker.typecheck(body.as_ref())
                 })
             }
+            Ast::Function { input: (input_var, _), input_type, ret, .. } => {
+                self.var(input_var.clone(), self.eval(input_type)?, move |t| {
+                    t.typecheck(ret.as_ref())
+                })
+            }
         }
     }
 }
+
+
 
