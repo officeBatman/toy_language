@@ -31,5 +31,7 @@ pub enum Ast {
         input_type: TypeAst,
         ret: Box<Ast>,
     },
+    LApp(Box<Ast>, Box<Ast>),
+    RApp(Box<Ast>, Box<Ast>),
 }                                                                               
 
