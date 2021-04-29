@@ -1,4 +1,4 @@
-use crate::ast::{Ast, Range};
+use crate::ast::{Ast, Range, TypeAst};
 use peg;
 
 peg::parser! {
@@ -31,6 +31,10 @@ peg::parser! {
         rule ident() -> String
             = quiet!{ s:$(ident_start_char() ident_char()*) { s.to_string() } }
             / expected!("identifier")
+
+        rule type_expr() -> TypeAst
+            = begin:position!() "int" end:position!() { TypeAst::Int(Range(begin, end)) }
+            / begin:position!() "bool" end:position!() { TypeAst::Bool(Range(begin, end)) }
 
         pub rule int_literal() -> Ast
             = begin:position!() n:i32() end:position!()
@@ -70,8 +74,14 @@ peg::parser! {
                 }
             }
 
+        pub rule function() -> Ast
+            = p1:position!() input:ident() p2:position!() _
+            ":" _ input_type:type_expr() _ "->" _ ret:expr()
+            { Ast::Function { input: (input, Range(p1, p2)), input_type, ret: Box::new(ret) } }
+
         pub rule expr() -> Ast
             = let_declaration()
+            / function()
             / arith()
     }
 }
