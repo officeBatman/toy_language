@@ -89,6 +89,18 @@ impl Evaluator {
             Ast::Function { input: (input_var, _), ret, .. } => {
                 Ok(Value::Function(input_var.clone(), ret.as_ref().clone()))
             }
+            Ast::LApp(func, arg) | Ast::RApp(arg, func) => {
+                let func = self.eval(func.as_ref())?;
+                let arg = self.eval(arg.as_ref())?;
+                match func {
+                    Value::Function(input_var, ret) => {
+                        self.var(input_var.clone(), arg, move |ev| {
+                            ev.eval(&ret)
+                        })
+                    }
+                    _ => Err(RuntimeError()),
+                }
+            }
         }
     }
 }

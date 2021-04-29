@@ -9,6 +9,16 @@ pub enum Type {
     Function(Rc<(Type, Type)>),
 }
 
+impl Type {
+    pub fn subset(&self, other: &Self) -> bool {
+        //  early case
+        if self == other { return true; }
+
+        //  ... actual code will go here ...
+        return false;
+    }
+}
+
 pub struct TypeChecker {
     vars: RefCell<HashMap<String, Type>>,
 }
@@ -80,9 +90,26 @@ impl TypeChecker {
                 })
             }
             Ast::Function { input: (input_var, _), input_type, ret, .. } => {
-                self.var(input_var.clone(), self.eval(input_type)?, move |t| {
+                let input_type = self.eval(input_type)?;
+                let ret_type = self.var(input_var.clone(), input_type.clone(), move |t| {
                     t.typecheck(ret.as_ref())
-                })
+                })?;
+                Ok(Type::Function(Rc::new((input_type, ret_type))))
+            }
+            Ast::LApp(func, arg) | Ast::RApp(arg, func) => {
+                let func = self.typecheck(func.as_ref())?;
+                let arg = self.typecheck(arg.as_ref())?;
+                match func {
+                    Type::Function(f) => {
+                        let (inp, outp) = f.as_ref();
+                        if Type::subset(&arg, inp) {
+                            Ok(outp.clone())
+                        } else {
+                            Err(())
+                        }
+                    }
+                    _ => Err(()),
+                }
             }
         }
     }
