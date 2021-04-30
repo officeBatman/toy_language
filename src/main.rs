@@ -9,7 +9,7 @@ use typechecker::TypeChecker;
 fn main() {
     let input = "
         let f = x: int -> y: int ->
-        x + y + 2
+            x + y + 2
         in 3 > f < 2
     ".to_string();
     let e = grammar::program(&input).unwrap();
