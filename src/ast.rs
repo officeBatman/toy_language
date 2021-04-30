@@ -7,6 +7,7 @@ pub struct Range(pub Pos, pub Pos);
                                                                                 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypeAst {
+    Paren(Box<TypeAst>, Range),
     Int(Range),
     Bool(Range),
     Function(Box<TypeAst>, Box<TypeAst>),

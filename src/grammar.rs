@@ -1,9 +1,15 @@
 use crate::ast::{Ast, Range, TypeAst};
 use peg;
 
-const IN: &str = "in";
-const LET: &str = "let";
-const KEYWORDS: &[&str] = &[ IN, LET ];
+const KEYWORDS: &[&str] = &[
+    "in",
+    "let",
+    "int",
+    "bool",
+    "and",
+    "true",
+    "false",
+];
 
 peg::parser! {
     grammar grammar() for str {
@@ -40,9 +46,16 @@ peg::parser! {
             } }
             / expected!("identifier")
 
-        rule type_expr() -> TypeAst
-            = begin:position!() "int" end:position!() { TypeAst::Int(Range(begin, end)) }
+        pub rule type_atom() -> TypeAst
+            = begin:position!() "(" _ t:type_expr() _ ")" end:position!() { TypeAst::Paren(Box::new(t), Range(begin, end)) }
+            / begin:position!() "int" end:position!() { TypeAst::Int(Range(begin, end)) }
             / begin:position!() "bool" end:position!() { TypeAst::Bool(Range(begin, end)) }
+
+        pub rule type_expr() -> TypeAst = precedence! {
+            l:@ _ "->" _ r:(@) { TypeAst::Function(Box::new(l), Box::new(r)) }
+            --
+            e:type_atom() { e }
+        }
 
         pub rule int_literal() -> Ast
             = begin:position!() n:i32() end:position!()
@@ -87,7 +100,7 @@ peg::parser! {
 
         pub rule function() -> Ast
             = p1:position!() input:ident() p2:position!() _
-            ":" _ input_type:type_expr() _ "->" _ ret:expr()
+            ":" _ input_type:type_atom() _ "->" _ ret:expr()
             { Ast::Function { input: (input, Range(p1, p2)), input_type, ret: Box::new(ret) } }
 
         pub rule expr() -> Ast

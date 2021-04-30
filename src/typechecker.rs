@@ -43,6 +43,7 @@ impl TypeChecker {
 
     pub fn eval(&self, type_ast: &TypeAst) -> Result<Type, ()> {
         match type_ast {
+            TypeAst::Paren(e, _) => self.eval(e.as_ref()),
             TypeAst::Int(_) => Ok(Type::Int),
             TypeAst::Bool(_) => Ok(Type::Bool),
             TypeAst::Function(l, r) => {
