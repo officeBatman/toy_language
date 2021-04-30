@@ -7,7 +7,9 @@ use eval::Evaluator;
 use typechecker::TypeChecker;
 
 fn main() {
-    let input = "let f = x: int -> x + 2 in f".to_string();
+    let input = "let f = x: int -> y: int ->
+                     x + y + 2
+                 in 3 > f < 2".to_string();
     let e = grammar::expr(&input).unwrap();
     println!("ast: {:?}", e);
     let t = TypeChecker::new().typecheck(&e).unwrap();
