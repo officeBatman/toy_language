@@ -13,7 +13,11 @@ pub type Result<T> = std::result::Result<T, RuntimeError>;
 pub enum Value {
     I32(i32),
     Bool(bool),
-    Function(String, Ast),
+    Function { 
+        input_var: String,
+        ret: Ast, 
+        captured: HashMap<String, Value>
+    },
 }
 
 impl Value {
@@ -60,6 +64,21 @@ impl Evaluator {
         ret
     }
 
+    pub fn var_many<'a, F, T, I>(&self, vars: I, f: F) -> T
+        where F: FnOnce(&Self) -> T, I: Iterator<Item=(String, Value)>
+    {
+        let mut names = vec![];
+        for (name, value) in vars {
+            names.push(name.clone());
+            self.vars.borrow_mut().insert(name, value);
+        }
+        let ret = f(self);
+        for name in names {
+            self.vars.borrow_mut().remove(&name);
+        }
+        ret
+    }
+
     pub fn eval(&self, ast: &Ast) -> Result<Value> {
         match ast {
             Ast::Paren(e, _) => self.eval(e),
@@ -87,15 +106,30 @@ impl Evaluator {
                 })
             }
             Ast::Function { input: (input_var, _), ret, .. } => {
-                Ok(Value::Function(input_var.clone(), ret.as_ref().clone()))
+                let captured = 
+                    ret.free_variables()
+                    .into_iter()
+                    .filter(|x| x != &input_var)
+                    .map(|x| match self.get_var(x) {
+                        Some(v) => Ok((x.clone(), v.clone())),
+                        None => Err(RuntimeError()),
+                    })
+                    .collect::<Result<HashMap<_,_>>>()?;
+                Ok(Value::Function { 
+                    input_var: input_var.clone(),
+                    ret: ret.as_ref().clone(),
+                    captured,
+                })
             }
             Ast::LApp(func, arg) | Ast::RApp(arg, func) => {
                 let func = self.eval(func.as_ref())?;
                 let arg = self.eval(arg.as_ref())?;
                 match func {
-                    Value::Function(input_var, ret) => {
-                        self.var(input_var.clone(), arg, move |ev| {
-                            ev.eval(&ret)
+                    Value::Function { input_var, ret, captured } => {
+                        self.var_many(captured.into_iter(), move |ev| {
+                            ev.var(input_var.clone(), arg, move |ev| {
+                                ev.eval(&ret)
+                            })
                         })
                     }
                     _ => Err(RuntimeError()),
@@ -119,6 +153,30 @@ mod test {
         let ev = Evaluator::new();
         let res = ev.eval(&grammar::expr("let x = 5 + 2 in x = 3").unwrap()).unwrap();
         assert!(matches!(res, Value::Bool(false)));
+    }
+
+    #[test]
+    fn function_expression() {
+        let ev = Evaluator::new();
+        let code = "(x: int -> x + 2)";
+        let res = ev.eval(&grammar::expr(code).unwrap()).unwrap();
+        assert!(matches!(res, Value::Function { .. } ));
+    }
+
+    #[test]
+    fn application() {
+        let ev = Evaluator::new();
+        let code = "(x: int -> x + 2) < 3";
+        let res = ev.eval(&grammar::expr(code).unwrap()).unwrap();
+        assert!(matches!(res, Value::I32(5)));
+    }
+
+    #[test]
+    fn closures() {
+        let ev = Evaluator::new();
+        let code = "(x: int -> (y: int -> x + y)) < 3 < 4";
+        let res = ev.eval(&grammar::expr(code).unwrap()).unwrap();
+        assert!(matches!(res, Value::I32(7)));
     }
 }
 
