@@ -94,6 +94,9 @@ peg::parser! {
             = let_declaration()
             / function()
             / arith()
+
+        pub rule program() -> Ast
+            = _ e:expr() _ { e }
     }
 }
 
