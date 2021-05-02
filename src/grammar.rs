@@ -154,4 +154,21 @@ mod tests {
         );
         assert_eq!(a, Ok(b));
     }
+
+    #[test]
+    fn type_expression() {
+        let a = grammar::type_expr("(int -> int) -> int").unwrap();
+        let b = TypeAst::Function(
+            Box::new(TypeAst::Paren(
+                Box::new(TypeAst::Function(
+                    Box::new(TypeAst::Int(Range(1, 4))),
+                    Box::new(TypeAst::Int(Range(8, 11))),
+                )),
+                Range(0, 12),
+            )),
+            Box::new(TypeAst::Int(Range(16, 19))),
+        );
+        assert_eq!(a, b);
+    }
 }
+
